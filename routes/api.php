@@ -3,18 +3,28 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\AuthController;
 
-Route::get('/user', function (Request $request) {
-    return $request->user();
-})->middleware('auth:sanctum');
+/*
+|--------------------------------------------------------------------------
+| API Routes
+|--------------------------------------------------------------------------
+*/
 
-// Public export route (no authentication required)
-Route::get('products/export', [ProductController::class, 'export']);
+Route::post('/login', [AuthController::class, 'login'])->name('api.login');
 
-// Product API routes with authentication
 Route::middleware('auth:sanctum')->group(function () {
-    Route::apiResource('products', ProductController::class)->except(['show']);
-    Route::get('products/{product}', [ProductController::class, 'show']);
-    Route::post('products/bulk-delete', [ProductController::class, 'bulkDelete']);
-    Route::get('categories', [ProductController::class, 'categories']);
+    Route::get('/user', fn (Request $request) => $request->user());
+
+    Route::post('/logout', [AuthController::class, 'logout'])->name('api.logout');
+
+    // ----- EXPORT MUST BE BEFORE THE RESOURCE ROUTE -----
+    Route::get('/products/export', [ProductController::class, 'export'])->name('products.export');
+
+    // Resource routes (index, show, store, update, destroy, …)
+    Route::apiResource('products', ProductController::class);
+
+    Route::post('/products/bulk-delete', [ProductController::class, 'bulkDelete']);
+    Route::get('/categories', [ProductController::class, 'categories']);
 });
+Route::get('/products/export', [ProductController::class, 'export'])->name('products.export');

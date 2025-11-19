@@ -108,24 +108,31 @@ class ProductController extends Controller
     {
         $query = Product::with('category');
 
-        // Filter by category
-        if ($request->has('category_id')) {
+        // -------------------------------------------------
+        // Apply filters only when the parameter is present
+        // AND not an empty string (filled)
+        // -------------------------------------------------
+        if ($request->filled('category_id')) {
             $query->where('category_id', $request->category_id);
         }
 
-        // Filter by status (enabled/disabled)
-        if ($request->has('status')) {
-            $query->where('enabled', $request->status == 'enabled' ? true : false);
+        if ($request->filled('status')) {
+            // Accept only "enabled" or "disabled"
+            $isEnabled = $request->status === 'enabled' ? true : false;
+            $query->where('enabled', $isEnabled);
         }
 
-        // Filter by search term
-        if ($request->has('search')) {
+        if ($request->filled('search')) {
             $query->where('name', 'like', '%' . $request->search . '%');
         }
 
-        // Paginate results
+        // -------------------------------------------------
+        // Paginate – default 10 per page if not supplied
+        // -------------------------------------------------
         $products = $query->paginate($request->get('per_page', 10));
 
+        // Laravel’s paginator already returns an empty data array
+        // together with pagination meta when there are no rows.
         return response()->json($products);
     }
 
@@ -391,24 +398,8 @@ class ProductController extends Controller
      */
     public function export(Request $request): BinaryFileResponse
     {
-        $query = Product::with('category');
-
-        // Apply same filters as index
-        if ($request->has('category_id')) {
-            $query->where('category_id', $request->category_id);
-        }
-
-        if ($request->has('status')) {
-            $query->where('enabled', $request->status == 'enabled' ? true : false);
-        }
-
-        if ($request->has('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%');
-        }
-
-        $fileName = 'products_' . now()->format('Y-m-d_H-i-s') . '.xlsx';
-
-        return Excel::download(new ProductsExport($query), $fileName);
+        // Pass the request so the export class can apply the same filters
+        return Excel::download(new ProductsExport($request), 'products_export.xlsx');
     }
 
     /**
